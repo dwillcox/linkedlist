@@ -9,97 +9,100 @@ module linked_list_module
      type(cell_t), pointer :: first_child=>NULL(), last_child=>NULL()
      type(cell_data_t)     :: data
    contains
-     procedure :: insert_after, insert_before, &
-          new_after, new_before, &
-          create_new_child, append_new_child, prepend_new_child, &
+     procedure :: new_after, new_before, &
+          create_only_child, append_new_child, prepend_new_child, &
           delete_cell, delete_children
   end type cell_t
 
 contains
 
   subroutine new_after(cell, cell_new)
-    class(cell_t), target, intent(inout)  :: cell
-    type(cell_t), target, intent(out) :: cell_new
-    type(cell_t), pointer     :: cell_ptr_next
+    class(cell_t), target :: cell
+    type(cell_t), pointer :: cell_new
+    type(cell_t), pointer :: cell_ptr_next
     cell_ptr_next => cell % next
     nullify(cell % next)
     allocate(cell % next)
-    cell_new = cell % next
+    call cell % next % data % init
+    cell_new => cell % next
     cell_new % next => cell_ptr_next
     cell_new % prev => cell
     if ( associated(cell_ptr_next) ) then
        cell_new % next % prev => cell_new
     end if
-    call cell_new % data % init
   end subroutine new_after
 
   subroutine new_before(cell, cell_new)
-    class(cell_t), target, intent(inout)  :: cell
-    type(cell_t), target, intent(out) :: cell_new
-    type(cell_t), pointer     :: cell_ptr_prev
+    class(cell_t), target :: cell
+    type(cell_t), pointer :: cell_new
+    type(cell_t), pointer :: cell_ptr_prev
     cell_ptr_prev => cell % prev
     nullify(cell % prev)
     allocate(cell % prev)
-    cell_new = cell % prev
+    call cell % prev % data % init
+    cell_new => cell % prev
     cell_new % prev => cell_ptr_prev
     cell_new % next => cell
     if ( associated(cell_ptr_prev) ) then
        cell_new % prev % next => cell_new
     end if
-    call cell_new % data % init
   end subroutine new_before
-  
-  subroutine insert_after(cell, cell_insert)
-    class(cell_t), target, intent(inout) :: cell
-    type(cell_t), target, intent(inout)  :: cell_insert
-    cell_insert % next => cell % next
-    cell_insert % prev => cell
-    cell % next => cell_insert
-  end subroutine insert_after
 
-  subroutine insert_before(cell, cell_insert)
-    class(cell_t), target, intent(inout) :: cell
-    type(cell_t), target, intent(inout)  :: cell_insert
-    cell_insert % next => cell
-    cell_insert % prev => cell % prev
-    cell % prev => cell_insert
-  end subroutine insert_before
+  ! NOT TESTED:
+  ! subroutine insert_after(cell, cell_insert)
+  !   class(cell_t), target :: cell
+  !   type(cell_t), target  :: cell_insert
+  !   cell_insert % next => cell % next
+  !   cell_insert % prev => cell
+  !   cell % next => cell_insert
+  ! end subroutine insert_after
 
-  subroutine create_new_child(cell, cell_new)
+  ! NOT TESTED:
+  ! subroutine insert_before(cell, cell_insert)
+  !   class(cell_t), target :: cell
+  !   type(cell_t), target  :: cell_insert
+  !   cell_insert % next => cell
+  !   cell_insert % prev => cell % prev
+  !   cell % prev => cell_insert
+  ! end subroutine insert_before
+
+  subroutine create_only_child(cell, cell_new)
     ! Creates the first child of an otherwise childless cell
-    class(cell_t), intent(inout) :: cell
-    type(cell_t), intent(out)   :: cell_new
+    class(cell_t) :: cell
+    type(cell_t), pointer :: cell_new
     allocate(cell % first_child)
-    cell % last_child => cell % first_child
-    cell_new = cell % first_child
-    call cell_new % data % init
-  end subroutine create_new_child
+    call cell % first_child % data % init
+    cell_new => cell % first_child
+    cell % last_child => cell_new
+  end subroutine create_only_child
 
   subroutine append_new_child(cell, cell_new)
-    class(cell_t), intent(inout) :: cell
-    type(cell_t), intent(out)   :: cell_new
+    class(cell_t) :: cell
+    type(cell_t), pointer :: cell_new
     if ( associated(cell % last_child) ) then
        call cell % last_child % new_after(cell_new)
+       cell % last_child => cell_new
     else
-       call cell % create_new_child(cell_new)
+       call cell % create_only_child(cell_new)
     end if
   end subroutine append_new_child
 
   subroutine prepend_new_child(cell, cell_new)
-    class(cell_t), intent(inout) :: cell
-    type(cell_t), intent(out)   :: cell_new
+    class(cell_t) :: cell
+    type(cell_t), pointer :: cell_new
     if ( associated(cell % first_child) ) then
        call cell % first_child % new_before(cell_new)
+       cell % first_child => cell_new
     else
-       call cell % create_new_child(cell_new)
+       call cell % create_only_child(cell_new)
     end if
   end subroutine prepend_new_child
 
   subroutine delete_cell(cell, cell_next)
     ! Delete this cell's data and its child cells
-    class(cell_t), intent(inout) :: cell
-    type(cell_t), pointer       :: cell_next
-    call cell % data % terminate()
+    class(cell_t) :: cell
+    type(cell_t), pointer :: cell_next
+    call cell % data % terminate
     if ( associated(cell % prev) ) then
        cell % prev % next => cell % next
     end if
@@ -114,7 +117,7 @@ contains
 
   subroutine delete_children(cell)
     ! Delete and deallocate all child cells
-    class(cell_t), intent(inout) :: cell
+    class(cell_t) :: cell
     type(cell_t), pointer    :: cell_ptr
     type(cell_t), pointer    :: cell_next
     cell_ptr => cell % first_child
